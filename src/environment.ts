@@ -1,5 +1,6 @@
 import * as alphaTab from "@coderline/alphatab";
 import type { ColorMode } from '@docusaurus/theme-common';
+import siteBase from '@site/src/site-base';
 
 const defaultColors = (new alphaTab.Settings()).display.resources;
 
@@ -22,8 +23,8 @@ function setAlphaTabColors(settings: alphaTab.Settings, colorMode: ColorMode) {
 }
 
  function setAlphaTabDefaults(settings: alphaTab.Settings, colorMode: ColorMode) {
-    settings.core.fontDirectory = "/font/";
-    settings.player.soundFont = "/soundfont/sonivox.sf3";
+    settings.core.fontDirectory = `${siteBase}font/`;
+    settings.player.soundFont = `${siteBase}soundfont/sonivox.sf3`;
     settings.player.scrollMode = alphaTab.ScrollMode.Off;
     settings.player.playerMode = alphaTab.PlayerMode.Disabled;
 

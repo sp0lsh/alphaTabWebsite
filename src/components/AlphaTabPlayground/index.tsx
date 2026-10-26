@@ -14,6 +14,8 @@ import { PlaygroundTrackSelector } from './track-selector';
 import { MediaSyncEditor } from './media-sync-editor';
 import { type HTMLMediaElementLike, MediaType, type MediaTypeState } from './helpers';
 import { YouTubePlayer } from './youtube-player';
+import { applyPersistedApiValues, applyPersistedSettings, applyTrackDefaults } from '@site/src/persisted-settings';
+import siteBase from '@site/src/site-base';
 
 export const AlphaTabPlayground: React.FC = () => {
     const viewPortRef = React.createRef<HTMLDivElement>();
@@ -27,18 +29,27 @@ export const AlphaTabPlayground: React.FC = () => {
 
     const [api, element] = useAlphaTab(s => {
         s.core.engine = 'svg';
-        s.core.file = '/files/canon-full.gp';
+        s.core.file = `${siteBase}files/canon-full.gp`;
         s.core.tracks = [0, 1];
         s.player.scrollElement = viewPortRef.current!;
         s.player.scrollOffsetY = -10;
         s.player.playerMode = alphaTab.PlayerMode.EnabledSynthesizer;
+        s.player.scrollMode = alphaTab.ScrollMode.Continuous;
+        applyPersistedSettings(s);
     });
+
+    useEffect(() => {
+        if (api) {
+            applyPersistedApiValues(api);
+        }
+    }, [api]);
 
     useAlphaTabEvent(api, 'renderFinished', () => {
         setLoading(false);
     });
 
     useAlphaTabEvent(api, 'scoreLoaded', score => {
+        applyTrackDefaults(score);
         if (score.backingTrack?.rawAudioFile) {
             setMediaType({
                 type: MediaType.Audio,

@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022", "ES2024.Promise", "DOM", "DOM.Iterable", "esnext.disposable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "strict": false,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "types": ["vite/client"],
+        "paths": {
+            "@site/src/site-base": ["./src/site-base"],
+            "@site/src/*": ["../src/*"],
+            "@theme/*": ["./src/shims/*"],
+            "@docusaurus/useIsBrowser": ["./src/shims/useIsBrowser"],
+            "@docusaurus/theme-common": ["./src/shims/theme-common"]
+        }
+    },
+    "include": ["src", "../src/declarations.d.ts"]
+}

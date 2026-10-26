@@ -10,6 +10,14 @@ import Chrome from '@uiw/react-color-chrome';
 import { useDebounce } from '@uidotdev/usehooks';
 import { rgbaToHexa } from '@uiw/react-color';
 import { downloadFile } from '@site/src/utils';
+import {
+    loadTrackDefaults,
+    persistApiValue,
+    persistSetting,
+    persistTrackDefaults,
+    toJsonValue,
+    type TrackDefaults
+} from '@site/src/persisted-settings';
 
 type SettingsContextProps = {
     api: alphaTab.AlphaTabApi;
@@ -77,15 +85,18 @@ function updateSettings(
 const factory = {
     settingAccessors(setting: string, updateOptions?: UpdateSettingsOptions) {
         const parts = setting.split('.');
+        const getValue = (context: SettingsContextProps) => {
+            let setting: any = context.api.settings;
+            for (let i = 0; i < parts.length - 1; i++) {
+                setting = setting[parts[i]];
+            }
+            return setting[parts[parts.length - 1]];
+        };
         return {
-            getValue(context: SettingsContextProps) {
-                let setting: any = context.api.settings;
-                for (let i = 0; i < parts.length - 1; i++) {
-                    setting = setting[parts[i]];
-                }
-                return setting[parts[parts.length - 1]];
-            },
+            getValue,
             setValue(context: SettingsContextProps, value) {
+                // some controls (e.g. color picker) set their value on mount, only persist actual changes
+                const previous = toJsonValue(getValue(context));
                 updateSettings(
                     context,
                     s => {
@@ -99,6 +110,9 @@ const factory = {
                     },
                     updateOptions
                 );
+                if (JSON.stringify(toJsonValue(value)) !== JSON.stringify(previous)) {
+                    persistSetting(setting, value);
+                }
             }
         };
     },
@@ -109,6 +123,21 @@ const factory = {
             },
             setValue(context: SettingsContextProps, value) {
                 context.api[setting] = value;
+                context.onSettingsUpdated();
+                persistApiValue(setting, value);
+            }
+        };
+    },
+    trackDefaultAccessors(name: keyof TrackDefaults) {
+        return {
+            getValue() {
+                return loadTrackDefaults()[name];
+            },
+            setValue(context: SettingsContextProps, value) {
+                persistTrackDefaults({
+                    ...loadTrackDefaults(),
+                    [name]: value
+                });
                 context.onSettingsUpdated();
             }
         };
@@ -244,7 +273,22 @@ function buildSettingsGroups(): SettingsGroupSchema[] {
             context.api.loadMidiForScore();
         }
     };
+    const trackDefault = (label: string, name: keyof TrackDefaults): SettingSchema => ({
+        label: label,
+        ...factory.trackDefaultAccessors(name),
+        control: { type: 'boolean-toggle' }
+    });
     return [
+        {
+            title: 'Track Defaults (applied on song load)',
+            settings: [
+                trackDefault('Override File', 'enabled'),
+                trackDefault('Standard Notation', 'showStandardNotation'),
+                trackDefault('Tablature', 'showTablature'),
+                trackDefault('Slash', 'showSlash'),
+                trackDefault('Numbered', 'showNumbered')
+            ]
+        },
         {
             title: 'Display ▸ General',
             settings: [
@@ -305,6 +349,7 @@ function buildSettingsGroups(): SettingsGroupSchema[] {
                         updateSettings(context, s => {
                             s.display.padding[0] = value;
                         });
+                        persistSetting('display.padding', context.api.settings.display.padding);
                     },
                     control: { type: 'number-input', min: 0, step: 1 }
                 },
@@ -317,6 +362,7 @@ function buildSettingsGroups(): SettingsGroupSchema[] {
                         updateSettings(context, s => {
                             s.display.padding[1] = value;
                         });
+                        persistSetting('display.padding', context.api.settings.display.padding);
                     },
                     control: { type: 'number-input', min: 0, step: 1 }
                 },
@@ -867,7 +913,7 @@ export const PlaygroundSettings: React.FC<PlaygroundSettingsProps> = ({ api, isO
                     <button
                         type="button"
                         onClick={() => {
-                            downloadFile();
+                            downloadFile(api);
                         }}
                         className="button button--sm button--secondary">
                         Export Guitar Pro
