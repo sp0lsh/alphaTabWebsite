@@ -136,6 +136,8 @@ const factory = {
             setValue(context: SettingsContextProps, value) {
                 persistTrackDefaults({
                     ...loadTrackDefaults(),
+                    // changing a staff visibility implies the user wants the defaults to be applied
+                    ...(name !== 'enabled' && { enabled: true }),
                     [name]: value
                 });
                 context.onSettingsUpdated();
