@@ -16,7 +16,7 @@ import {
     persistSetting,
     persistTrackDefaults,
     toJsonValue,
-    type TrackDefaults
+    type StaffView
 } from '@site/src/persisted-settings';
 
 type SettingsContextProps = {
@@ -128,16 +128,15 @@ const factory = {
             }
         };
     },
-    trackDefaultAccessors(name: keyof TrackDefaults) {
+    trackDefaultAccessors(name: StaffView) {
         return {
             getValue() {
-                return loadTrackDefaults()[name];
+                // unset views show alphaTab's staff defaults
+                return loadTrackDefaults()[name] ?? new alphaTab.model.Staff()[name];
             },
             setValue(context: SettingsContextProps, value) {
                 persistTrackDefaults({
                     ...loadTrackDefaults(),
-                    // changing a staff visibility implies the user wants the defaults to be applied
-                    ...(name !== 'enabled' && { enabled: true }),
                     [name]: value
                 });
                 context.onSettingsUpdated();
@@ -275,7 +274,7 @@ function buildSettingsGroups(): SettingsGroupSchema[] {
             context.api.loadMidiForScore();
         }
     };
-    const trackDefault = (label: string, name: keyof TrackDefaults): SettingSchema => ({
+    const trackDefault = (label: string, name: StaffView): SettingSchema => ({
         label: label,
         ...factory.trackDefaultAccessors(name),
         control: { type: 'boolean-toggle' }
@@ -284,7 +283,6 @@ function buildSettingsGroups(): SettingsGroupSchema[] {
         {
             title: 'Track Defaults (applied on song load)',
             settings: [
-                trackDefault('Override File', 'enabled'),
                 trackDefault('Standard Notation', 'showStandardNotation'),
                 trackDefault('Tablature', 'showTablature'),
                 trackDefault('Slash', 'showSlash'),

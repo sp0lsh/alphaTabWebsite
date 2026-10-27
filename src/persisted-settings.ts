@@ -5,26 +5,17 @@ const storageKey = 'alphaTab-playground.settings';
 // paths which are controlled by the app itself, not by the user
 const notPersisted = new Set(['player.playerMode']);
 
-export type TrackDefaults = {
-    enabled: boolean;
-    showStandardNotation: boolean;
-    showTablature: boolean;
-    showSlash: boolean;
-    showNumbered: boolean;
-};
+export type StaffView = 'showStandardNotation' | 'showTablature' | 'showSlash' | 'showNumbered';
+
+// only the views the user has set, unset views keep the value from the loaded file
+export type TrackDefaults = Partial<Record<StaffView, boolean>>;
+
+const staffViews: StaffView[] = ['showStandardNotation', 'showTablature', 'showSlash', 'showNumbered'];
 
 type Stored = {
     settings: Record<string, unknown>;
     api: Record<string, unknown>;
     trackDefaults: TrackDefaults;
-};
-
-const defaultTrackDefaults: TrackDefaults = {
-    enabled: false,
-    showStandardNotation: true,
-    showTablature: true,
-    showSlash: false,
-    showNumbered: false
 };
 
 function load(): Stored {
@@ -37,10 +28,9 @@ function load(): Stored {
     return {
         settings: stored.settings ?? {},
         api: stored.api ?? {},
-        trackDefaults: {
-            ...defaultTrackDefaults,
-            ...stored.trackDefaults
-        }
+        trackDefaults: Object.fromEntries(
+            staffViews.filter(v => typeof stored.trackDefaults?.[v] === 'boolean').map(v => [v, stored.trackDefaults![v]])
+        )
     };
 }
 
@@ -117,21 +107,20 @@ export function persistTrackDefaults(trackDefaults: TrackDefaults) {
 
 export function applyTrackDefaults(score: alphaTab.model.Score) {
     const defaults = loadTrackDefaults();
-    const anyVisible =
-        defaults.showStandardNotation || defaults.showTablature || defaults.showSlash || defaults.showNumbered;
-    if (!defaults.enabled || !anyVisible) {
-        return;
-    }
     for (const track of score.tracks) {
         for (const staff of track.staves) {
             // non-stringed staves (drums, piano) have no tabs, keep their notation as in the file
             if (!staff.isStringed) {
                 continue;
             }
-            staff.showStandardNotation = defaults.showStandardNotation;
-            staff.showTablature = defaults.showTablature;
-            staff.showSlash = defaults.showSlash;
-            staff.showNumbered = defaults.showNumbered;
+            const views = staffViews.map(v => defaults[v] ?? staff[v]);
+            // never hide a staff completely
+            if (!views.some(visible => visible)) {
+                continue;
+            }
+            staffViews.forEach((v, i) => {
+                staff[v] = views[i];
+            });
         }
     }
 }
