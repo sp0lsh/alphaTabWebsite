@@ -16,6 +16,7 @@ import { type HTMLMediaElementLike, MediaType, type MediaTypeState } from './hel
 import { YouTubePlayer } from './youtube-player';
 import { applyPersistedApiValues, applyPersistedSettings, applyTrackDefaults } from '@site/src/persisted-settings';
 import siteBase from '@site/src/site-base';
+import { useNoteMover } from '@site/src/note-mover';
 
 export const AlphaTabPlayground: React.FC = () => {
     const viewPortRef = React.createRef<HTMLDivElement>();
@@ -31,6 +32,7 @@ export const AlphaTabPlayground: React.FC = () => {
         s.core.engine = 'svg';
         s.core.file = `${siteBase}files/canon-full.gp`;
         s.core.tracks = [0, 1];
+        s.core.includeNoteBounds = true;
         s.player.scrollElement = viewPortRef.current!;
         s.player.scrollOffsetY = -10;
         s.player.playerMode = alphaTab.PlayerMode.EnabledSynthesizer;
@@ -43,6 +45,8 @@ export const AlphaTabPlayground: React.FC = () => {
             applyPersistedApiValues(api);
         }
     }, [api]);
+
+    useNoteMover(api);
 
     useAlphaTabEvent(api, 'renderFinished', () => {
         setLoading(false);

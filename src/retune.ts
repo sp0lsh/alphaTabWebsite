@@ -75,3 +75,30 @@ export function retuneStaff(staff: alphaTab.model.Staff, semitones: number): num
     staff.stringTuning.name = '';
     return outOfRange;
 }
+
+/**
+ * Moves the note to the adjacent string in the given direction, keeping its pitch.
+ * The note stays when that string is used by another note of the beat or cannot play the pitch.
+ * @param direction 1 for the next higher string, -1 for the next lower string
+ * @returns whether the note was moved
+ */
+export function moveNoteString(note: alphaTab.model.Note, direction: 1 | -1): boolean {
+    const tuning = note.beat.voice.bar.staff.tuning;
+    const open = (string: number) => tuning[tuning.length - string];
+    const string = note.string + direction;
+    if (string < 1 || string > tuning.length) {
+        return false;
+    }
+    const fret = note.fret + open(note.string) - open(string);
+    const free = !note.beat.notes.some(o => o !== note && o.string === string);
+    if (fret < 0 || fret > maxFret || !free) {
+        return false;
+    }
+    note.string = string;
+    note.fret = fret;
+    // keep the manual choice when the staff is retuned later
+    if (fileStrings.has(note)) {
+        fileStrings.set(note, string);
+    }
+    return true;
+}
