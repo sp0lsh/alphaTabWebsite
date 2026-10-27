@@ -4,6 +4,7 @@ import { useState } from 'react';
 import styles from './styles.module.scss';
 import { useEffectNoMount } from '@site/src/hooks';
 import { formatTuning } from '@site/src/tuning-name';
+import { fileTuningOffset, retuneStaff } from '@site/src/retune';
 
 type StaffOptions = {
     showSlash: boolean;
@@ -126,6 +127,14 @@ export const TrackItem: React.FC<TrackItemProps> = ({ api, track, isSelected }) 
         api.renderTracks(newTracks);
     };
 
+    // out of range note count per staff after the last retune, also used to re-render after a retune
+    const [outOfRangeNotes, setOutOfRangeNotes] = useState(new Map<alphaTab.model.Staff, number>());
+    const retune = (staff: alphaTab.model.Staff, semitones: number) => {
+        const outOfRange = retuneStaff(staff, semitones);
+        setOutOfRangeNotes(m => new Map(m).set(staff, outOfRange));
+        api.render();
+    };
+
     const [transposeAudio, setTransposeAudio] = useState<number>(0);
     const [transposeFull, setTransposeFull] = useState<number>(0);
 
@@ -179,15 +188,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ api, track, isSelected }) 
                 </div>
             </div>
 
-            {track.staves
-                .filter(staff => staff.isStringed)
-                .map(staff => (
-                    <div className={`${styles['settings-item']}`} key={`tuning-${staff.index}`}>
-                        <div className={`${styles['settings-item-label']}`}>Tuning</div>
-                        <div className={styles['settings-item-control']}>{formatTuning(staff.tuning)}</div>
-                    </div>
-                ))}
-
             <div className={`${styles['settings-item']}`}>
                 <div className={`${styles['settings-item-label']}`}>Volume</div>
                 <div className={styles['settings-item-control']}>
@@ -204,6 +204,46 @@ export const TrackItem: React.FC<TrackItemProps> = ({ api, track, isSelected }) 
                     />
                 </div>
             </div>
+
+            {track.staves
+                .filter(staff => staff.isStringed)
+                .map(staff => {
+                    const offset = fileTuningOffset(staff);
+                    const outOfRange = outOfRangeNotes.get(staff) ?? 0;
+                    return (
+                        <div className={`${styles['settings-item']}`} key={`tuning-${staff.index}`}>
+                            <div className={`${styles['settings-item-label']}`}>Tuning</div>
+                            <div className={styles['settings-item-control']}>
+                                <button
+                                    type="button"
+                                    className={`button ${styles['icon-button']} button--sm button--secondary button--outline`}
+                                    onClick={() => retune(staff, -1)}
+                                    data-tooltip-content="Tune strings down, frets up (same sound)"
+                                    data-tooltip-id="tooltip-playground">
+                                    ▼
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`button ${styles['icon-button']} button--sm button--secondary button--outline`}
+                                    onClick={() => retune(staff, 1)}
+                                    data-tooltip-content="Tune strings up, frets down (same sound)"
+                                    data-tooltip-id="tooltip-playground">
+                                    ▲
+                                </button>
+                                <span>
+                                    {formatTuning(staff.tuning)}
+                                    {offset !== 0 && ` ${offset > 0 ? '+' : '−'}${Math.abs(offset)}`}
+                                    {outOfRange > 0 && (
+                                        <>
+                                            <br />
+                                            {outOfRange} notes out of range
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+                        </div>
+                    );
+                })}
 
             <div className={`${styles['settings-item']}`}>
                 <div
