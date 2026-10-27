@@ -3,6 +3,7 @@ import type React from 'react';
 import { useState } from 'react';
 import styles from './styles.module.scss';
 import { useEffectNoMount } from '@site/src/hooks';
+import { formatTuning } from '@site/src/tuning-name';
 
 type StaffOptions = {
     showSlash: boolean;
@@ -177,6 +178,15 @@ export const TrackItem: React.FC<TrackItemProps> = ({ api, track, isSelected }) 
                     </button>
                 </div>
             </div>
+
+            {track.staves
+                .filter(staff => staff.isStringed)
+                .map(staff => (
+                    <div className={`${styles['settings-item']}`} key={`tuning-${staff.index}`}>
+                        <div className={`${styles['settings-item-label']}`}>Tuning</div>
+                        <div className={styles['settings-item-control']}>{formatTuning(staff.tuning)}</div>
+                    </div>
+                ))}
 
             <div className={`${styles['settings-item']}`}>
                 <div className={`${styles['settings-item-label']}`}>Volume</div>
